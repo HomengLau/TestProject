@@ -1,4 +1,10 @@
+import java.util.*
+
 apply plugin: 'com.android.application'
+
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+def appName = properties.getProperty("project.name")
 
 android {
     compileSdkVersion 25
@@ -7,10 +13,31 @@ android {
         applicationId "com.taylor.testproject"
         minSdkVersion 25
         targetSdkVersion 25
-        versionCode 1
-        versionName "1.0"
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        versionCode getSelfDefinedVersion("code")
+        versionName getSelfDefinedVersion("name")
+        //versionName "${verName}-beta-build-${buildTime()}"
+        //testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
+
+    applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            def outputFile = output.outputFile
+            //Log.d("liuhq13","outputFile.name="+outputFile.name)
+            println("outputFile.name=" + outputFile.name)
+
+            if (outputFile != null && outputFile.name.endsWith('app-debug.apk')) {
+                output.outputFile = new File('/Users/taylor/Documents/app', outputFile.name.replace("app",  appName + "_" + defaultConfig.versionName));
+                //outputFile.delete("outputFile.name="+outputFile.name)
+                outputFile.delete()
+            }
+            if (outputFile != null && outputFile.name.endsWith('app-release-unsigned.apk')) {
+                output.outputFile = new File('/Users/taylor/Documents/app',outputFile.name.replace("app", appName + "_" + defaultConfig.versionName));
+                outputFile.delete()
+            }
+
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -18,6 +45,24 @@ android {
         }
     }
 }
+def getSelfDefinedVersion(type) {
+    int aa = 1
+    int bb = 0
+    Process process = "git rev-list --count HEAD".execute()
+    process.waitFor()
+    int cccc = process.getText().toInteger()
+
+    if ("code".equals(type)) {
+        aa * 1000000 + bb * 10000 + cccc
+    } else if ("name".equals(type)) {
+        String today = new Date().format("yyMMdd")
+        process = "git describe --always".execute()
+        process.waitFor()
+        String sha1 = process.getText().trim()
+        "$aa.$bb.$cccc.$today.$sha1"
+    }
+}
+
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
